@@ -1,0 +1,41 @@
+name: panelbook
+
+on:
+  # Runs when you push a release tag (panelbook-vX.Y.Z) or start it by hand
+  # from the Actions tab. Switch on push/PR runs once the test suite is extended.
+  push:
+    tags: ["panelbook-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to create the Release on tags
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install LibreOffice
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-calc
+      - name: Install Python packages
+        run: pip install -r requirements.txt
+      - name: Regression tests
+        run: pytest panelbook/tests -v
+      - name: Build workbook
+        run: python panelbook/make.py
+      - name: Keep the built workbook (Actions run page, 30 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Panel_Schedule_Tool
+          path: dist/Panel_Schedule_Tool.xlsx
+          retention-days: 30
+      - name: Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/panelbook-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Panel_Schedule_Tool.xlsx
+          body_path: panelbook/CHANGELOG.md

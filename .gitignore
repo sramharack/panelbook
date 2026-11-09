@@ -1,0 +1,19 @@
+# build outputs (attached to Releases instead)
+dist/
+*.xlsx
+*.xlsm
+*.pdf
+!**/fixtures/*.xlsx
+# Office lock files
+~$*
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
