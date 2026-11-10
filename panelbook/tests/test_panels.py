@@ -60,4 +60,16 @@ TEST_PANELS = {
              10: dict(desc="2P load, slash breaker", cls="Other", add=2000, pol=2, trip=20),  # B-C
              14: dict(desc="2P load, straight 240V", cls="Other", add=2000, pol=2, trip=20,
                      brk="Straight 240V")}, 42, False),                               # A-B
+    # Continuous input overrides the load class
+    "E15": (dict(name="E15", slots=12, dist="120/208 Wye", mains=100, mcb=100),
+            {1: dict(desc="Fryer", cls="Kitchen Equipment", add=2500, trip=20, cont="Yes"),
+             3: dict(desc="Mixer", cls="Kitchen Equipment", add=2500, trip=20)}, 42, False),
+    # Imbalance: all on A, light (2 A on 225 A) vs heavy (A ~ 75 A, B/C ~ 8 A on 100 A)
+    "E16": (dict(name="E16", slots=12, dist="120/208 Wye", mains=225, mcb=225),
+            {1: dict(desc="small", cls="Other", add=240, trip=20)}, 42, False),
+    "E17": (dict(name="E17", slots=24, dist="120/208 Wye", mains=100, mcb=100),
+            {1: dict(desc="A1", cls="Other", add=1800, trip=20), 7: dict(desc="A2", cls="Other", add=1800, trip=20),
+             13: dict(desc="A3", cls="Other", add=1800, trip=20), 19: dict(desc="A4", cls="Other", add=1800, trip=20),
+             2: dict(desc="A5", cls="Other", add=1800, trip=20), 8: dict(desc="A6", cls="Other", add=1800, trip=20),
+             3: dict(desc="B1", cls="Other", add=900, trip=20), 5: dict(desc="C1", cls="Other", add=900, trip=20)}, 42, False),
 }

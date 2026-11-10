@@ -5,6 +5,7 @@ from common import *
 from lookups import build_lookups
 from panel import build_panel
 from summary import build_panels, build_topology
+from printtab import build_print_tab
 
 OUT = "Panel_Schedule_Tool.xlsx"
 
@@ -142,7 +143,11 @@ def build_readme(wb):
         ("p", "Never type on the schedule itself: a typed-over cell no longer calculates. The tool counts typed-over schedule cells and flags them ERR in Circuit flags and on the Panels sheet."),
         ("p", "Reset a circuit: select its yellow cells (Description to Override reason) and press Delete. Reset a whole panel: choose 'Circuit_Inputs' in the Name Box (left of the formula bar), press Delete. Header inputs are kept."),
         ("p", "Working / print view: the 1 and 2 buttons above the column letters hide or show the input zones."),
-        ("p", "AutoCAD: each panel sheet has a named range 'Schedule' (the print area). Use it with TABLE > From a data link, and choose 'Start with Excel formatting, do not update' to keep formatting changes made in CAD."),
+        ("h", "Print tabs (for printing and AutoCAD)"),
+        ("p", "Each panel has an orange '<panel> PRINT' tab: the same schedule, linked live to the panel sheet, but with 2- and 3-pole breakers as real merged cells (description centred across its rows) and fixed phase shading. Print or paste into AutoCAD from these tabs."),
+        ("p", "Loads, descriptions and totals update by themselves. Merges are set when the workbook is built: if you change a breaker's poles, the banner under the print tab turns red. Regenerate with: uv run python panelbook/tools/migrate.py <this file> <new file>."),
+        ("p", "Continuous loads show '(C)' after the description, with a footnote. Each circuit's Continuous input (blank / Yes / No) overrides its load class."),
+        ("p", "AutoCAD: each panel sheet and print tab has a named range 'Schedule' (the print area). Use it with TABLE > From a data link, and choose 'Start with Excel formatting, do not update' to keep formatting changes made in CAD."),
         ("h", "Line currents (TOTAL AMPS)"),
         ("p", "Each circuit adds its line current to the phases it lands on: 1-pole = VA / V(L-N); 2-pole = VA / V(L-L) on each of its two lines; 3-pole = VA / (√3 × V(L-L)) on each line. This is exact for 1- and 2-pole loads and balanced 3-pole loads on every system, including high-leg delta. (Phase VA ÷ V(L-N) overstates 3-pole loads by 15% and understates 2-pole loads on 120/208 V by 13%.)"),
         ("p", "Panel current = the highest line current. Est. demand amps = that × (total demand VA / total connected VA). Loading, Panels and Topology all use it. MCA = next standard breaker at or above the est. demand amps, as on the v005 sheets."),
@@ -207,7 +212,11 @@ def main(out=None, extra=None, examples=True):
     build_panels(wb, listed)
     build_topology(wb)
     build_readme(wb)
-    order = ["Read Me", "Panels", "Topology"] + listed + list(TEMPLATES) + ["Lookups"]
+    prints = []
+    for name in listed:
+        hv, ckts, cap, hide = panels[name]
+        prints.append(build_print_tab(wb, name, hv, ckts, cap, hide, panels).title)
+    order = ["Read Me", "Panels", "Topology"] + listed + list(TEMPLATES) + ["Lookups"] + prints
     wb._sheets = [wb[n] for n in order]
     wb.active = 0
     wb.calculation = CalcProperties(fullCalcOnLoad=True)

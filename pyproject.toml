@@ -1,6 +1,6 @@
 [project]
 name = "panelbook"
-version = "2.1.0"
+version = "2.2.0"
 description = "Macro-free Excel panel schedules generated from Python"
 requires-python = ">=3.10"
 dependencies = ["openpyxl>=3.1", "lxml>=4.9"]

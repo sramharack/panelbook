@@ -70,6 +70,7 @@ SETTINGS = [  # label, value, fmt, name
     ("Default insulation rating, °C: design basis (75 = any NEC building wire; 90 = THHN/THWN-2, XHHW-2 only)", 75, "0", "LK_DefIns"),
     ("Flag combined derating factor below (company practice)", 0.80, "0%", "LK_DerateMin"),
     ("Apply NEC 240.4(B) next size up (Yes / No)", "No", None, "LK_Use2404B"),
+    ("Imbalance only matters above this spread, as % of MCB / bus rating", 0.10, "0%", "LK_ImbAbs"),
 ]
 
 # NEC 2023 Table 310.16 (same values as 2017/2020). Cu 60/75/90 C, Al 60/75/90 C.
@@ -182,7 +183,7 @@ def build_lookups(wb):
     dvh = DataValidation(type="list", formula1='"A,B,C"', allow_blank=True)
     ws.add_data_validation(dvh); dvh.add("G4:G19")
 
-    # --- Settings A22..B36
+    # --- Settings A22..B37
     ws["A22"] = "SETTINGS"
     ws["A22"].font = font(10, True, C_LABEL)
     for i, (lab, val, fmt, nm) in enumerate(SETTINGS):

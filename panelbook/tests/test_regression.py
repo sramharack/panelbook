@@ -161,7 +161,7 @@ def test_continuous_125pct_governs(wb):
     # 2500 VA / 120 V = 20.8 A continuous -> 26.0 A at 75 C -> #10 (#12 is 25 A)
     assert cable(wb, "E8", 1) == "2#10 + #12G Cu  [125%]"
     assert cable(wb, "E8", 3) == "2#12 + #12G Cu  [OCPD]"               # same load, noncontinuous
-    assert status(wb, "E8", 1).startswith("WARN: breaker below 125%")    # breaker undersized: still flagged
+    assert status(wb, "E8", 1) == "WARN: breaker < 125% of continuous load (210.20(A)) → 30 A min"   # 26 A -> 30 A
 
 
 def test_override_checked_against_tests(wb):
@@ -180,14 +180,14 @@ def check(wb, sheet, label):
 
 def test_standard_breaker_125pct_check(wb):
     # 16.7 A continuous on 20 A: 125% = 20.8 A > 20 A
-    assert status(wb, "E8", 7) == "WARN: breaker below 125% of continuous load (210.20(A)/215.3)"
+    assert status(wb, "E8", 7) == "WARN: breaker < 125% of continuous load (210.20(A)) → 25 A min"   # 20.8 A -> 25 A
     assert "80% RATED" in p(wb, "E8", "brknote")
 
 
 def test_all_100pct_rated(wb):
     assert p(wb, "E9", "brkmode") == 2
     assert status(wb, "E9", 7) == "OK"                                    # 16.7 A on 100% rated 20 A
-    assert status(wb, "E9", 1) == "WARN: load exceeds 100%-rated breaker"  # 20.8 A on 20 A
+    assert status(wb, "E9", 1) == "WARN: load exceeds 100%-rated breaker → 25 A min"  # 20.8 A on 20 A
     assert cable(wb, "E9", 1) == "2#12 + #12G Cu  [OCPD]"                 # (a) at 100%: 20.8 A <= 25 A
     assert p(wb, "E9", "brknote").startswith("ALL BREAKERS 100% RATED")
 
@@ -204,7 +204,7 @@ def test_mcb_nec_minimum(wb):
 
 def test_per_circuit_100pct_feeder(wb):
     # 15.8 A continuous on a 100%-rated 15 A breaker: over 100% -> flagged; type shows on schedule
-    assert status(wb, "E12", 2) == "WARN: load exceeds 100%-rated breaker"
+    assert status(wb, "E12", 2) == "WARN: load exceeds 100%-rated breaker → 20 A min"
     assert "UNLESS NOTED 100% RATED" in p(wb, "E12", "brknote")
 
 
@@ -270,3 +270,61 @@ def test_blank_starter_builds(tmp_path):
     assert n == 0
     names = openpyxl.load_workbook(calc).sheetnames
     assert "Template" in names and "HDP" not in names and "LP000" not in names
+
+
+# ---------- v2.2 continuous input, balance relative to load, print tabs, fixed shading
+def test_continuous_input_overrides_class(wb):
+    from common import S
+    # Kitchen Equipment is noncontinuous by class; CKT 1 set Yes, CKT 3 left blank
+    assert cable(wb, "E15", 1).endswith("[125%]")                 # 2,500 VA / 120 V = 20.8 A x 1.25 = 26 A -> #10
+    assert cable(wb, "E15", 3) == "2#12 + #12G Cu  [OCPD]"                # same load, class default (not continuous)
+    ws = wb["E15"]
+    assert ws[f"{S['desco']}{row_of(1)}"].value == "FRYER (C)"
+    assert ws[f"{S['desco']}{row_of(3)}"].value == "MIXER"
+    assert "(C) = CONTINUOUS LOAD" in ws[f"{S['L3o']}{Layout(42).BOT}"].value
+
+
+def test_imbalance_light_load_is_ok(wb):
+    text, flag = check(wb, "E16", "Line currents / balance")
+    assert flag == "OK" and "light load" in text                  # 100% imbalance, but a few amps on 225 A
+
+
+def test_imbalance_heavy_load_warns_with_suggestion(wb):
+    text, flag = check(wb, "E17", "Line currents / balance")
+    assert flag == "WARN"
+    assert "move ~" in text and "from A to" in text and "e.g. CKT" in text
+
+
+def test_print_tab_real_merges_and_sync(wb):
+    from common import S
+    tab = wb["E13 PRINT"]
+    merged = [str(m) for m in tab.merged_cells.ranges]
+    r3 = row_of(3)
+    assert f"{S['desco']}{r3}:{S['desco']}{r3 + 2}" in merged        # 3P: three rows merged
+    assert f"{S['desce']}{row_of(2)}:{S['desce']}{row_of(2) + 1}" in merged   # 2P: two rows merged
+    assert tab[f"{S['desco']}{r3}"].value == "THREE POLE LOAD"
+    banner = tab[f"{S['ckto']}{Layout(42).LAST + 2}"].value
+    assert banner.startswith("Print tab in sync")
+
+
+def test_fixed_phase_shading(wb):
+    from common import S, R0
+    ws = wb["HDP"]
+    assert ws[f"{S['L1o']}{R0}"].fill.fgColor.rgb.endswith("D9D9D9")      # row 1: A shaded
+    assert ws[f"{S['L2o']}{R0 + 1}"].fill.fgColor.rgb.endswith("D9D9D9")  # row 2: B shaded
+    assert not ws[f"{S['L2o']}{R0}"].fill.fgColor.rgb.endswith("D9D9D9")
+
+
+def test_migrate_roundtrip(tmp_path):
+    """Migrate the built example workbook (current layout) and get the same totals."""
+    import make, sys
+    sys.path.insert(0, str(TOOL / "tools"))
+    _, calc, n = make.make(tmp_path / "src.xlsx")
+    import migrate
+    report, n2 = migrate.migrate(tmp_path / "src.xlsx", tmp_path / "out.xlsx")
+    assert n2 == 0
+    a = openpyxl.load_workbook(tmp_path / "src.xlsx", data_only=True)
+    b = openpyxl.load_workbook(tmp_path / "out.xlsx", data_only=True)
+    for name in ("HDP", "LP000", "RMDP", "LP-R1"):
+        for k in ("conn", "dem", "phA", "phB", "phC"):
+            assert b[name][f"{PV}{P[k]}"].value == pytest.approx(a[name][f"{PV}{P[k]}"].value), (name, k)

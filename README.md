@@ -29,7 +29,8 @@ The printed schedule keeps the familiar company layout, ready to paste into Auto
 - **Transformer-fed sub-panels** with voltage-mismatch checks.
 - **Cable and EGC selection** from NEC 310.16 and 250.122 with ambient and bundling factors, termination
   limits, 240.4(D) and parallel sets. Per-circuit override.
-- **Checks on every circuit and panel:** ERR = must fix, WARN = check.
+- **Checks on every circuit and panel:** ERR = must fix, WARN = check, each with a suggested fix.
+- **Print tabs** with real merged cells and fixed shading, ready for printing and AutoCAD.
 
 ## Using it
 
@@ -38,7 +39,7 @@ Copy *Template* (or *Template 84*) for each new panel and list it on the *Panels
 
 ## Status
 
-**v2.1.0.** In use for review on a live project. See [`panelbook/CHANGELOG.md`](panelbook/CHANGELOG.md).
+**v2.2.0.** In use for review on a live project. See [`panelbook/CHANGELOG.md`](panelbook/CHANGELOG.md).
 
 Next (v2.2):
 
@@ -48,7 +49,6 @@ Next (v2.2):
 | Products | Catalogue table of breaker lines actually specified; WARN when not in catalogue |
 | Cables | Per-circuit ambient / conduit fill; voltage drop with upsizing |
 | Loads | Design (spare-capacity) factor; existing load from metering (NEC 220.87); optional power factor |
-| CAD | Static phase shading and fixed text sizes for cleaner AutoCAD tables |
 
 ## Building from source
 

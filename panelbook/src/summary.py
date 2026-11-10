@@ -115,7 +115,7 @@ def build_panels(wb, names):
               f'&IF(N({V["warn"]})>0," · "&{V["warn"]}&" WARN","")'
               f'&IF(AND(ISNUMBER({V["bus"]}),ISNUMBER({V["mcb"]})),IF(N({V["mcb"]})>N({V["bus"]})," · MCB > bus",""),"")'
               f'&IF(ISNUMBER({V["loading"]}),IF(N({V["loading"]})>1," · Overloaded",IF(N({V["loading"]})>LK_MCBWarn," · Loading "&TEXT({V["loading"]},"0%"),"")),"")'
-              f'&IF(ISNUMBER({V["imb"]}),IF(N({V["imb"]})>LK_ImbLimit," · Imbalance "&TEXT({V["imb"]},"0%"),""),"")')
+              f'&IF(N({g("imbw")})=1," · Imbalance "&TEXT({V["imb"]},"0%"),"")')
         ws[f"{RH['flagstr']}{r}"] = f'=IF({ok}=1,{fs},"")'
         # voltage change across the feeder (transformer-fed sub-panels)
         psys = f'IFERROR(INDEX(${RV["sys"]}${REG_R0}:${RV["sys"]}${REG_R1},MATCH({V["fed"]},{Bc},0))&"","")'

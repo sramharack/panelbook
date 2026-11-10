@@ -93,46 +93,49 @@ def status_formula(Z, H, r):
     fx = f"${Z['q1']}{r}:${Z['add']}{r}"
     slots, ph, wr, df, lim = pv("slots"), pv("ph"), pv("wires"), pv("def"), pv("lim")
     hl, vhl, vll, vln = pv("hl"), pv("vhl"), pv("vll"), pv("vln")
+    nxt = lambda x: f'INDEX(LK_Breakers,MIN(ROWS(LK_Breakers),COUNTIF(LK_Breakers,"<"&{x})+1))'
+    Ia, i100 = f"{H['Ia']}{r}", f"{H['is100']}{r}"
     rules = [
-        (f'AND({cont}<>"",{has}=1)', f'"ERR: slot taken by CKT "&{cont}'),
+        (f'AND({cont}<>"",{has}=1)', f'"ERR: slot taken by CKT "&{cont}&" → clear this row or reduce that breaker\'s poles"'),
         (f'{has}=0', f'IF({cont}<>"","(pole of CKT "&{cont}&")","")'),
-        (f'{c}>{slots}', f'"ERR: beyond panel size ("&{slots}&" ckts)"'),
-        (f'{c}+2*({Pp}-1)>{slots}', f'"ERR: "&{Pp}&"P breaker runs past last slot"'),
-        (f'AND({Pp}=3,{ph}<>3)', '"ERR: 3P breaker on 1-phase panel"'),
-        (f'AND({Pp}>=2,{ph}=1,{wr}<3)', '"ERR: multi-pole breaker on 2-wire panel"'),
-        (f'AND({Pp}=1,{ph}=3,{wr}=3,{va}>0)', '"ERR: 1P load on 3-wire system (no neutral)"'),
+        (f'{c}>{slots}', f'"ERR: beyond panel size ("&{slots}&" ckts) → raise No. of Circuits or move the load"'),
+        (f'{c}+2*({Pp}-1)>{slots}', f'"ERR: "&{Pp}&"P breaker runs past last slot → start it higher up"'),
+        (f'AND({Pp}=3,{ph}<>3)', '"ERR: 3P breaker on 1-phase panel → use 2P"'),
+        (f'AND({Pp}>=2,{ph}=1,{wr}<3)', '"ERR: multi-pole breaker on 2-wire panel → use 1P"'),
+        (f'AND({Pp}=1,{ph}=3,{wr}=3,{va}>0)', '"ERR: 1P load on 3-wire system (no neutral) → use 2P/3P"'),
         (f'AND({hl}<>"",{rph}={hl},{Pp}=1,{va}>0)',
-         f'"ERR: 1P load on high leg "&{hl}&" ("&TEXT({vhl},"0")&" V to N)"'),
+         f'"ERR: 1P load on high leg "&{hl}&" ("&TEXT({vhl},"0")&" V to N) → move it to an A or C row"'),
         (f'{v}=-1', '"ERR: a panel cannot feed itself"'),
-        (f'{v}=-2', f'"ERR: no tab named \'"&{s}&"\'"'),
+        (f'{v}=-2', f'"ERR: no tab named \'"&{s}&"\' → check the sub-panel name"'),
         (f'AND({v}=1,{xf}=0,{hl}<>"",{H["sHL"]}{r}="",{H["sN"]}{r}=1,ISNUMBER(FIND({hl},{phd})))',
-         f'"ERR: "&{s}&" neutral loads would see "&TEXT({vhl},"0")&" V (feeder on high leg)"'),
+         f'"ERR: "&{s}&" neutral loads would see "&TEXT({vhl},"0")&" V → feed from A-C or mark XFMR"'),
         (f'AND({v}=1,{xf}=0,OR({H["sVLL"]}{r}<>{vll},{H["sVLN"]}{r}<>{vln}))',
-         f'"WARN: "&{s}&" is "&{H["sVLN"]}{r}&"/"&{H["sVLL"]}{r}&" V: mark XFMR or fix"'),
-        (f'AND({v}=1,{xf}=0,{Pp}<>{sp})', f'"WARN: "&{s}&" needs a "&{sp}&"P feeder"'),
-        (f'AND({v}=1,COUNT({fx})>0)', '"WARN: fixture/added VA ignored (sub-panel)"'),
-        (f'AND({xf}=1,{v}<>1)', '"WARN: XFMR only applies to a sub-panel feeder"'),
-        (f'AND({va}>0,NOT(ISNUMBER({trip})))', '"WARN: no trip rating"'),
-        (f'AND({va}>0,ISNUMBER({trip}),{H["Ia"]}{r}>N({trip})+0.001)',
-         f'IF({H["is100"]}{r}=1,"WARN: load exceeds 100%-rated breaker",'
-         f'"WARN: breaker below 125% of continuous load (210.20(A)/215.3)")'),
-        (f'AND({va}>0,ISNUMBER({trip}),{amp}>IF({H["is100"]}{r}=1,1,{lim})*N({trip}))',
-         f'"WARN: "&TEXT({amp}/{trip},"0%")&" of trip"'),
+         f'"WARN: "&{s}&" is "&{H["sVLN"]}{r}&"/"&{H["sVLL"]}{r}&" V → mark XFMR or fix its system"'),
+        (f'AND({v}=1,{xf}=0,{Pp}<>{sp})', f'"WARN: "&{s}&" needs a "&{sp}&"P feeder → set Poles to "&{sp}'),
+        (f'AND({v}=1,COUNT({fx})>0)', '"WARN: fixture/added VA ignored on a sub-panel feeder → clear them"'),
+        (f'AND({xf}=1,{v}<>1)', '"WARN: XFMR only applies to a sub-panel feeder → clear Via XFMR"'),
+        (f'AND({va}>0,NOT(ISNUMBER({trip})))',
+         f'"WARN: no trip rating → "&{nxt(f"{Ia}")}&" A min for this load"'),
+        (f'AND({va}>0,ISNUMBER({trip}),{Ia}>N({trip})+0.001)',
+         f'IF({i100}=1,"WARN: load exceeds 100%-rated breaker → "&{nxt(Ia)}&" A min",'
+         f'"WARN: breaker < 125% of continuous load (210.20(A)) → "&{nxt(Ia)}&" A min")'),
+        (f'AND({va}>0,ISNUMBER({trip}),{amp}>IF({i100}=1,1,{lim})*N({trip}))',
+         f'"WARN: "&TEXT({amp}/{trip},"0%")&" of trip → "&{nxt(f"{amp}/IF({i100}=1,1,{lim})")}&" A"'),
         (f'AND({hl}<>"",{rph}={hl},{Pp}=1,{has}=1)',
-         '"WARN: 1P breaker on high leg - no 120 V loads here"'),
+         '"WARN: 1P breaker on high leg → remove it or make it 2P/3P"'),
         (f'AND({hl}<>"",{Pp}=2,ISNUMBER(FIND({hl},{phd})),OR({va}>0,{v}=1),'
          f'NOT(ISNUMBER(SEARCH("STRAIGHT",${Z["brk"]}{r}&""))))',
-         '"WARN: 2P on high leg: straight 240 V breaker, not 120/240 (NEC 240.85); 1-ph 240 V loads better on A-C"'),
-        (f'N({oi})=-1', '"WARN: wire override not in Lookups size list"'),
+         '"WARN: 2P on high leg (240.85) → Breaker Type Straight 240V, or move to A-C"'),
+        (f'N({oi})=-1', '"WARN: wire override not in Lookups size list → pick from the list"'),
         (f'AND(N({oi})>0,{va}>0,{oi}<MAX({H["xa"]}{r},{H["xb"]}{r},{H["xc"]}{r}))',
          f'"WARN: wire override fails "&IF({oi}<{H["xc"]}{r},"OCPD (240.4)",IF({oi}<{H["xa"]}{r},'
-         f'"125% continuous (210.19/215.2)","derated load (310.15)"))'),
-        (f'AND(N({oi})>0,N({oi})<{pv("minw")})', '"WARN: wire override below minimum "&LK_MinWire'),
-        (f'AND({ns}>1,{wi}>0,{wi}<{pv("i10")})', '"WARN: parallel sets need 1/0 min (310.10(G))"'),
-        (f'AND({own}>0,TRIM({cls})="")', f'"WARN: no load class (counted as "&{df}&")"'),
-        (f'AND({v}=1,ISNUMBER(${Z["ovr"]}{r}))', '"WARN: VA override ignored on a sub-panel feeder (edit the sub-panel)"'),
+         f'"125% continuous","derated load"))&" → "&INDEX(LK_WLabel,MAX({H["xa"]}{r},{H["xb"]}{r},{H["xc"]}{r}))&" min"'),
+        (f'AND(N({oi})>0,N({oi})<{pv("minw")})', '"WARN: wire override below minimum "&LK_MinWire&" AWG"'),
+        (f'AND({ns}>1,{wi}>0,{wi}<{pv("i10")})', '"WARN: parallel sets need 1/0 min (310.10(G)) → larger override"'),
+        (f'AND({own}>0,TRIM({cls})="")', f'"WARN: no load class (counted as "&{df}&") → pick a class"'),
+        (f'AND({v}=1,ISNUMBER(${Z["ovr"]}{r}))', '"WARN: VA override ignored on a sub-panel feeder → edit the sub-panel"'),
         (f'{H["ov"]}{r}=1', f'"WARN: VA override (calculated "&TEXT({H["own0"]}{r},"#,##0")&" VA)"'),
-        (f'AND({v}=1,ISNA(MATCH({s},LK_PanelNames,0)))', f'"WARN: add "&{s}&" to Panels sheet"'),
+        (f'AND({v}=1,ISNA(MATCH({s},LK_PanelNames,0)))', f'"WARN: add "&{s}&" to the Panels sheet"'),
     ]
     out = '"OK"'
     for cond, res in reversed(rules):
@@ -222,8 +225,11 @@ def helper_formulas(ws, Z, H, side, L):
         Lr = h["amp"]
         wov = f"${Z['wov']}{r}"
         ws[t] = f"=IF(ISNUMBER({tr}),{tr},0)"
-        ws[cf] = (f'=IF({v}=1,N(INDIRECT("\'"&{s}&"\'!${PV}${P["contf"]}")),'
-                  f'IF({h["key"]}="",0,IF(IFERROR(INDEX(LK_Cont,MATCH({h["key"]},LK_ClassName,0)),"No")="Yes",1,0)))')
+        cin = f'UPPER(LEFT(TRIM(${Z["cont"]}{r}&""),1))'
+        ws[cf] = (f'=IF({v}=1,N(INDIRECT("\'"&{s}&"\'!${PV}${P["contf"]}")),IF({cin}="Y",1,IF({cin}="N",0,'
+                  f'IF({h["key"]}="",0,IF(IFERROR(INDEX(LK_Cont,MATCH({h["key"]},LK_ClassName,0)),"No")="Yes",1,0)))))')
+        ws[h["mvd"]] = (f'=IF(AND({h["P"]}=1,{h["cont"]}="",{v}<>1,{h["own"]}>0,${ROWPH}{r}={pv("hph")},'
+                        f'{h["own"]}<2*{pv("mvx")}),ABS({h["own"]}-{pv("mvx")}),"")')
         ws[h["is100"]] = (f'=IF(OR({pv("brkmode")}=2,LEFT(UPPER(TRIM(${Z["brk"]}{r}&"")),4)="100%"),1,0)')
         # 210.19(A)(1)/215.2(A)(1) and 210.20(A)/215.3: 125% of continuous load, 100% if the breaker is 100% rated
         ws[Ia] = f"={Lr}*(IF({h['is100']}=1,1,1.25)*{cf}+(1-{cf}))"
@@ -365,8 +371,32 @@ def build_panel(wb, sheet_name, hdr_vals, circuits, cap=42, tab_color="1F4E79", 
         "ins": (f'=IF(ISNUMBER(SEARCH("90",{IN["mat"]}&"")),90,IF(ISNUMBER(SEARCH("75",{IN["mat"]}&"")),75,'
                 f'IF(N(LK_DefIns)=90,90,75)))'),
         "b2404": '=IF(UPPER(LEFT(TRIM(LK_Use2404B&""),1))="Y",1,0)',
-        "contf": (f'=IF({pv("conn")}<=0,0,SUMPRODUCT({CB["conn"]}{CLS_R0}:{CB["conn"]}{CLS_R0+NCLS-1},'
-                  f'--({CB["cflag"]}{CLS_R0}:{CB["cflag"]}{CLS_R0+NCLS-1}="Yes"))/{pv("conn")})'),
+        "contf": (f'=IF({pv("conn")}<=0,0,MIN(1,(SUMPRODUCT({OH["VA"]}{R0_}:{OH["VA"]}{R1},{OH["cf"]}{R0_}:{OH["cf"]}{R1})'
+                  f'+SUMPRODUCT({EH["VA"]}{R0_}:{EH["VA"]}{R1},{EH["cf"]}{R0_}:{EH["cf"]}{R1}))/{pv("conn")}))'),
+        "ncont": (f'=SUMPRODUCT(({OH["cf"]}{R0_}:{OH["cf"]}{R1}=1)*({OH["own"]}{R0_}:{OH["own"]}{R1}>0))'
+                  f'+SUMPRODUCT(({EH["cf"]}{R0_}:{EH["cf"]}{R1}=1)*({EH["own"]}{R0_}:{EH["own"]}{R1}>0))'),
+        "psig": (f'=SUMPRODUCT({OH["P"]}{R0_}:{OH["P"]}{R1},ROW({OH["P"]}{R0_}:{OH["P"]}{R1})^2)'
+                 f'+3*SUMPRODUCT({EH["P"]}{R0_}:{EH["P"]}{R1},ROW({EH["P"]}{R0_}:{EH["P"]}{R1})^2)'),
+        "hph": (f'=IF({pv("hot")}<2,"",IF({pv("hl")}<>"",IF(IF({pv("hl")}="A",{pv("phB")},{pv("phA")})'
+                f'>=IF({pv("hl")}="C",{pv("phB")},{pv("phC")}),IF({pv("hl")}="A","B","A"),IF({pv("hl")}="C","B","C")),'
+                f'IF({pv("hot")}=2,IF({pv("phA")}>={pv("phB")},"A","B"),'
+                f'IF(AND({pv("phA")}>={pv("phB")},{pv("phA")}>={pv("phC")}),"A",IF({pv("phB")}>={pv("phC")},"B","C")))))'),
+        "lph": (f'=IF({pv("hot")}<2,"",IF({pv("hl")}<>"",IF({pv("hph")}=IF({pv("hl")}="A","B","A"),'
+                f'IF({pv("hl")}="C","B","C"),IF({pv("hl")}="A","B","A")),IF({pv("hot")}=2,IF({pv("hph")}="A","B","A"),'
+                f'IF(AND({pv("phA")}<{pv("phB")},{pv("phA")}<={pv("phC")}),"A",IF({pv("phB")}<={pv("phC")},"B","C")))))'),
+        "mvx": (f'=IF({pv("hph")}="",0,(CHOOSE(CODE({pv("hph")})-64,{pv("phA")},{pv("phB")},{pv("phC")})'
+                f'-CHOOSE(CODE({pv("lph")})-64,{pv("phA")},{pv("phB")},{pv("phC")}))/2)'),
+        "spread": (f'=IF({pv("hph")}="",0,ABS(CHOOSE(CODE({pv("hph")})-64,{pv("aA")},{pv("aB")},{pv("aC")})'
+                   f'-CHOOSE(CODE({pv("lph")})-64,{pv("aA")},{pv("aB")},{pv("aC")})))'),
+        "imbw": (f'=IF({pv("hot")}<2,0,IF(AND({pv("imb")}>LK_ImbLimit,OR(NOT(ISNUMBER({pv("rating")})),'
+                 f'{pv("spread")}>N(LK_ImbAbs)*N({pv("rating")}))),1,0))'),
+        "mvckt": (f'=IF(COUNT({OH["mvd"]}{R0_}:{OH["mvd"]}{R1},{EH["mvd"]}{R0_}:{EH["mvd"]}{R1})=0,0,'
+                  f'IFERROR(INDEX(${ODD["ckt"]}${R0_}:${ODD["ckt"]}${R1},MATCH(MIN({OH["mvd"]}{R0_}:{OH["mvd"]}{R1},'
+                  f'{EH["mvd"]}{R0_}:{EH["mvd"]}{R1}),{OH["mvd"]}{R0_}:{OH["mvd"]}{R1},0)),'
+                  f'INDEX(${EVEN["ckt"]}${R0_}:${EVEN["ckt"]}${R1},MATCH(MIN({OH["mvd"]}{R0_}:{OH["mvd"]}{R1},'
+                  f'{EH["mvd"]}{R0_}:{EH["mvd"]}{R1}),{EH["mvd"]}{R0_}:{EH["mvd"]}{R1},0))))'),
+        "mvva": (f'=IF({pv("mvckt")}=0,0,IF(MOD({pv("mvckt")},2)=1,INDEX({OH["own"]}{R0_}:{OH["own"]}{R1},({pv("mvckt")}+1)/2),'
+                 f'INDEX({EH["own"]}{R0_}:{EH["own"]}{R1},{pv("mvckt")}/2)))'),
         "basis": (f'="CONDUCTORS: "&IF({pv("mat")}="Al","ALUMINUM","COPPER")&", "&{pv("ins")}&" °C MIN. ("'
                   f'&IF({pv("ins")}=90,"THHN/THWN-2, XHHW-2","THWN, THHN/THWN-2, XHHW-2")&"), SIZED TO NEC 310.16"'
                   f'&IF({pv("fct")}<0.995,", DERATED x"&TEXT({pv("fct")},"0.00")&" ("&{pv("amb")}&" °C, "&{pv("ccc")}'
@@ -510,6 +540,7 @@ def build_panel(wb, sheet_name, hdr_vals, circuits, cap=42, tab_color="1F4E79", 
                  "v2": "Fixture 2\nVA each", "add": "Added VA", "sub": "Sub-Panel\n(feeds)",
                  "xf": "Via\nXFMR", "pol": "Poles", "trip": "Trip (A)", "brk": "Breaker\nType",
                  "wov": "Wire\noverride", "ovr": "VA\noverride", "why": "Override reason",
+                 "cont": "Continuous\n(blank = class)",
                  "va": "Load (VA)", "amp": "Load (A)",
                  "wire": "Cable (auto)", "stat": "Status"}
         for k, col in Z.items():
@@ -602,8 +633,13 @@ def build_panel(wb, sheet_name, hdr_vals, circuits, cap=42, tab_color="1F4E79", 
         ("Line currents / balance",
          f'="A "&TEXT({pv("aA")},"0.0")&IF({pv("hot")}>=2,"  ·  B "&TEXT({pv("aB")},"0.0"),"")'
          f'&IF({pv("hot")}=3,"  ·  C "&TEXT({pv("aC")},"0.0"),"")&" A"&IF({pv("hot")}>=2,"   →  "'
-         f'&TEXT({pv("imb")},"0%")&IF({pv("hl")}<>""," A-C lighting-leg imbalance"," max deviation"),"")',
-         f'=IF({pv("hot")}<2,"–",IF({pv("imb")}>LK_ImbLimit,"WARN","OK"))'),
+         f'&TEXT({pv("imb")},"0%")&IF({pv("hl")}<>""," A-C imbalance"," imbalance")'
+         f'&IF(ISNUMBER({pv("rating")}),", spread "&TEXT({pv("spread")},"0")&" A = "&TEXT({pv("spread")}/{pv("rating")},"0%")'
+         f'&" of "&{pv("rating")}&" A","")'
+         f'&IF({pv("imbw")}=1,"   →  move ~"&TEXT({pv("mvx")},"#,##0")&" VA from "&{pv("hph")}&" to "&{pv("lph")}'
+         f'&IF({pv("mvckt")}>0,", e.g. CKT "&{pv("mvckt")}&" ("&TEXT({pv("mvva")},"#,##0")&" VA)",""),'
+         f'IF({pv("imb")}>LK_ImbLimit,"   (light load: OK)","")),"")',
+         f'=IF({pv("hot")}<2,"–",IF({pv("imbw")}=1,"WARN","OK"))'),
         ("Circuit flags",
          f'={pv("err")}&" circuit(s) ERR   ·   "&{pv("warn")}&" circuit(s) WARN"'
          f'&IF({pv("nov")}>0,"   ·   "&{pv("nov")}&" VA override(s)","")'
@@ -682,7 +718,8 @@ def build_panel(wb, sheet_name, hdr_vals, circuits, cap=42, tab_color="1F4E79", 
         "Smaller panel: set No. of Circuits, then hide the unused circuit rows to shorten the printout.",
         "VA override: type the VA you want in 'VA override' (and why). Totals, amps, demand and cable follow;",
         "    the row shows WARN and the override is listed below. Clear the cell to go back to the calculation.",
-        "Reset a row: select its yellow cells (Description to Override reason) and press Delete.",
+        "Continuous: blank follows the load class (Lookups col P); Yes / No sets this circuit. Shows (C) on the schedule.",
+        "Reset a row: select its yellow cells (Description to Continuous) and press Delete.",
         "Reset the panel: pick 'Circuit_Inputs' in the Name Box (left of the formula bar), press Delete.",
         "Working / print view: the 1 and 2 buttons above the column letters hide or show the input zones.",
         "Never type on the schedule itself: the tool flags typed-over cells (Panel checks, Circuit flags).",
@@ -796,13 +833,17 @@ def build_panel(wb, sheet_name, hdr_vals, circuits, cap=42, tab_color="1F4E79", 
                     "t": f'IF(ISNUMBER({tr}),{tr},"")',
                     "p": f'IF(OR(ISNUMBER({tr}),{H["VA"]}{rr}>0,{H["valid"]}{rr}=1,ISNUMBER({po})),{H["P"]}{rr},"")',
                     "b": f'UPPER(TRIM(${Z["brk"]}{rr}&""))',
-                    "w": f'{H["wlab"]}{rr}'}
+                    "w": f'{H["wlab"]}{rr}',
+                    "c": f'IF(AND({H["cf"]}{rr}=1,{H["own"]}{rr}>0)," (C)","")'}
             here, up = txt(r), (txt(r - 1) if r > R0_ else None)
             src = f'{H["dsrc"]}{r}'
             pick = lambda k: (f'=IF({src}=0,{here[k]},IF({src}=1,{up[k]},""))' if up
                               else f'=IF({src}=0,{here[k]},"")')
             NOSHRINK = Alignment(horizontal="center", vertical="center")
-            box(f"{s[dk]}{r}", Alignment(horizontal="center", vertical="center", shrink_to_fit=True), n12, pick("d"))
+            here["dc"] = f'({here["d"]})&{here["c"]}'
+            if up:
+                up["dc"] = f'({up["d"]})&{up["c"]}'
+            box(f"{s[dk]}{r}", Alignment(horizontal="center", vertical="center", shrink_to_fit=True), n12, pick("dc"))
             box(f"{s[tk]}{r}", NOSHRINK, n12, pick("t"), '0"A"')
             box(f"{s[pk]}{r}", NOSHRINK, n12, pick("p"), "0")
             box(f"{s[bk]}{r}", Alignment(horizontal="center", vertical="center", shrink_to_fit=True), font(10), pick("b"))
@@ -845,6 +886,7 @@ def build_panel(wb, sheet_name, hdr_vals, circuits, cap=42, tab_color="1F4E79", 
     border_range(ws, f"{s['L1o']}{B}:{s['L2e']}{B}", top=med)
     box(f"{s['L3o']}{B}:{s['tripe']}{L.LAST}", AL_WRAP_TL, n10,
         f'="NOTES:"&CHAR(10)&{pv("basis")}&CHAR(10)&{pv("brknote")}'
+        f'&IF({pv("ncont")}>0,CHAR(10)&"(C) = CONTINUOUS LOAD: BREAKER AND CONDUCTORS SIZED AT 125% (100% WHERE 100% RATED).","")'
         f'&IF(LEN({IN["notes2"]})=0,"",CHAR(10)&{IN["notes2"]})')
     ordr = f"{CB['ord']}${CLS_R0}:{CB['ord']}${CLS_R0+NCLS-1}"
     cr = lambda key: f"{CB[key]}${CLS_R0}:{CB[key]}${CLS_R0+NCLS-1}"
@@ -882,6 +924,13 @@ def build_panel(wb, sheet_name, hdr_vals, circuits, cap=42, tab_color="1F4E79", 
             if c.font is None or c.font.name not in (FONT, "Bookman Old Style"):
                 c.font = n12
             c.fill = F_WHITE
+    from printtab import system_phases
+    _ph, _w = system_phases(hdr_vals.get("dist") or "120/208 Wye")
+    _letters = "ABC" if _ph == 3 else ("AB" if _w >= 3 else "A")
+    for r in range(R0_, R1 + 1):
+        a, z = PHASE_COLS[_letters[(r - R0_) % len(_letters)]]
+        for col in (s[a], s[z]):
+            ws[f"{col}{r}"].fill = fill(F_PH)
 
     # ================= CONDITIONAL FORMATTING =================
     from openpyxl.styles.differential import DifferentialStyle
@@ -894,7 +943,9 @@ def build_panel(wb, sheet_name, hdr_vals, circuits, cap=42, tab_color="1F4E79", 
     for letter, (a, z) in PHASE_COLS.items():
         ws.conditional_formatting.add(f"{s[a]}{R0_}:{s[z]}{R1}",
                                       FormulaRule(formula=[f'AND(${ROWPH}{R0_}="{letter}",${ODD["ckt"]}{R0_}<={pv("slots")})'],
-                                                  fill=fill(F_PH)))
+                                                  fill=fill(F_PH), stopIfTrue=True))
+        ws.conditional_formatting.add(f"{s[a]}{R0_}:{s[z]}{R1}",
+                                      FormulaRule(formula=["TRUE"], fill=fill("FFFFFF")))
     for Z, H in [(ODD, OH), (EVEN, EH)]:
         rng = f"{Z['ckt']}{R0_}:{Z['stat']}{R1}"
         ws.conditional_formatting.add(rng, FormulaRule(formula=[f"${Z['ckt']}{R0_}>{pv('slots')}"],
@@ -961,6 +1012,8 @@ def build_panel(wb, sheet_name, hdr_vals, circuits, cap=42, tab_color="1F4E79", 
         dv("LK_Breakers", f"{Z['trip']}{R0_}:{Z['trip']}{R1}", "warning", "Trip rating", "Not a standard trip rating. Keep it?")
         dv("LK_BrkType", f"{Z['brk']}{R0_}:{Z['brk']}{R1}", "warning", "Breaker type", "Not in the Lookups list. Keep it?")
         dv("LK_WSize", f"{Z['wov']}{R0_}:{Z['wov']}{R1}", "stop", "Wire size", "Pick a size from the list (AWG / kcmil).")
+        dv('"Yes,No"', f"{Z['cont']}{R0_}:{Z['cont']}{R1}", "stop", "Continuous load",
+           "Yes = runs 3 h or more (125% sizing). No = not continuous. Blank = follow the load class (Lookups).")
         dv("0", f"{Z['ovr']}{R0_}:{Z['ovr']}{R1}", "stop", "VA override", "Enter the VA to use (≥ 0), or clear the cell.",
            typ="decimal", op="greaterThanOrEqual")
 

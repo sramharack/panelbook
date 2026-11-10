@@ -2,6 +2,14 @@
 
 Deliverable: `Panel_Schedule_Tool.xlsx`, v2 built 2026-11-02 (v1 2026-10-28). It replaces the macro-based panel workbook (NEW SHEET / IMPORT SUB PANEL / COPY buttons). Everything runs on lookup tables, INDEX/MATCH and INDIRECT; Excel 2007 functions only.
 
+## v2.2 (2026-11-10)
+Print tabs (src/printtab.py): cells reference the panel sheet; 2P/3P text columns are real merges built from
+the input layout at build time; psig (sum of P x row^2, even side x3) is baked into a sync banner.
+Imbalance warning (imbw): imb > LK_ImbLimit AND spread (line A of heaviest - lightest balanced phase) >
+LK_ImbAbs x rating. Suggestion: mvx = (VA heavy - VA light)/2, candidate = 1P own load on the heavy phase
+closest to mvx and below 2 x mvx. Continuous fraction cf per circuit: input Yes/No, else class flag;
+contf = SUMPRODUCT(VA, cf)/conn.
+
 ## v2.1 (2026-11-10)
 See CHANGELOG. Layout: odd inputs A:U (C:Q editable), schedule W:AP, even inputs AR:BL, hidden calc zone from
 BP; parameters/exports in BQ1:BQ81. New helper columns per circuit: cf, Ia, tc, xa, xb, xc, gov (cable tests),

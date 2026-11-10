@@ -1,5 +1,21 @@
 # Changelog: panelbook
 
+## v2.2.0 (2026-11-10)
+- **Print tabs** ("<panel> PRINT"): live-linked copy of each schedule with real merged cells for 2P/3P breakers
+  (text centred across the rows) and fixed phase shading, for printing and AutoCAD. A banner under the
+  schedule turns red if breaker poles change after the build (regenerate with tools/migrate.py).
+- **Continuous loads**: per-circuit "Continuous" input (blank = load class, Yes, No) drives the 125% breaker
+  and cable checks; "(C)" after the description on the schedule, with a footnote.
+- **Fix suggestions** in every circuit warning (e.g. "→ 30 A min", "→ move it to an A or C row"), MCB and
+  cable-basis checks.
+- **Imbalance relative to load**: WARN only when imbalance exceeds 20% AND the line-current spread exceeds 10%
+  of the MCB/bus rating (Lookups setting); otherwise "light load: OK". Suggests the VA to move, between
+  which phases, and a candidate 1-pole circuit.
+- **Phase shading** is a fixed fill on the schedule (shows in AutoCAD); conditional formatting corrects it
+  for single-phase panels.
+- **migrate.py** reads any panelbook version (columns found by their headers).
+- Layout: inputs gain the Continuous column (odd C:R); hidden calc zone from BR, parameters in BS.
+
 ## v2.1.0 (2026-11-10)
 **Cable sizing (correctness fix).** v2.0 always derated from the 90 °C column, which undersizes 75 °C cable
 whenever ambient or bundling factors apply (e.g. #12 on 20 A at 35 °C with 4–6 conductors).
