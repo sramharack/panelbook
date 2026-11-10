@@ -38,27 +38,31 @@ Copy *Template* (or *Template 84*) for each new panel and list it on the *Panels
 
 ## Status
 
-**v2.0.0 baseline.** In use for review on a live project. Fixes in progress:
+**v2.1.0.** In use for review on a live project. See [`panelbook/CHANGELOG.md`](panelbook/CHANGELOG.md).
+
+Next (v2.2):
 
 | Area | Change |
 |---|---|
-| ⚠️ Cable sizing | Derating always starts from the 90 °C column. **Wrong for 75 °C cable when ambient or bundling factors apply** (can undersize, e.g. #12 at 35 °C with 4–6 conductors). Unaffected when the factor is 1.0 (30 °C, ≤ 3 conductors). Fix: separate insulation rating (75 °C default, 90 °C explicit), 75/60 °C ambient columns, 125% continuous-load check. |
-| Breakers | 80% / 100% rated breakers, continuous-load check, schedule footnote. |
-| Schedule | Multi-pole rows shown merged; system box spans all VA columns. |
-| Overrides | VA override + reason columns, "overrides in effect" log, detection of values typed onto the schedule. |
-| Warnings | Quieter high-leg 2P (240.85) warning. |
-| Workflow | Row and tab reset, working/print views, CAD Data Link range, blank starter workbook. |
-| Assurance | Source-cited tables, rule tests, independent reference model, approved-panel tests, in-workbook self-test. |
+| Assurance | Source-cited tables, independent reference model, approved-panel tests, in-workbook self-test sheet |
+| Products | Catalogue table of breaker lines actually specified; WARN when not in catalogue |
+| Cables | Per-circuit ambient / conduit fill; voltage drop with upsizing |
+| Loads | Design (spare-capacity) factor; existing load from metering (NEC 220.87); optional power factor |
+| CAD | Static phase shading and fixed text sizes for cleaner AutoCAD tables |
 
 ## Building from source
 
-Needs Python 3.10+ and LibreOffice (used headless to recalculate).
+Needs [uv](https://docs.astral.sh/uv/) (or Python 3.10+ with pip) and LibreOffice (used headless to recalculate).
 
 ```bash
-pip install -r requirements.txt
-python panelbook/make.py          # -> dist/Panel_Schedule_Tool.xlsx
-pytest panelbook/tests -v         # regression tests
+uv sync                                        # once: creates .venv with Python + dependencies
+uv run python panelbook/make.py                # -> dist/Panel_Schedule_Tool.xlsx
+uv run python panelbook/make.py --blank --out dist/panelbook_blank.xlsx
+uv run pytest                                  # regression tests (30)
+uv run python panelbook/tools/migrate.py old.xlsx new.xlsx   # carry a v2.0 project file forward
 ```
+
+Without uv: `pip install -r requirements.txt`, then the same commands without `uv run`.
 
 Never hand-edit the workbook: change `panelbook/src/` and rebuild. Design notes and verification record:
 [`panelbook/docs/design-notes.md`](panelbook/docs/design-notes.md).
@@ -67,6 +71,7 @@ Never hand-edit the workbook: change `panelbook/src/` and rebuild. Design notes 
 panelbook/
   src/        workbook generator (layout, lookups, panel sheet, register/topology, assembly)
   tests/      regression panels and checks
+  tools/      migrate.py (carry older project workbooks forward)
   docs/       design notes, images
   make.py     build → recalc → finished workbook
 shared/       LibreOffice recalc and cached-value injection

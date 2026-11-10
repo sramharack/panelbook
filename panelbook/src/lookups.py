@@ -23,22 +23,22 @@ DIST = [  # name, phases, wires, VLN, VLL, note, high-leg phase
 DIST_ROWS = 16
 
 NEC42 = "NEC 2020 Table 220.42 (Table 220.45 in NEC 2023). Verify against your adopted edition."
-CLASSES = [  # name, method, f1, l1, f2, l2, f3, basis
-    ("Cooling", "Constant", 1.0, None, None, None, None, "100%"),
-    ("EV Charging", "Constant", 1.0, None, None, None, None, "100% (continuous; size OCPD at 125% separately)"),
-    ("Heating", "Constant", 1.0, None, None, None, None, "100%"),
-    ("HVAC", "Constant", 1.0, None, None, None, None, "100%"),
-    ("Kitchen Equipment", "Quantity", 1.0, None, None, None, None, "NEC 220.56: factor by number of units (table at right). Does not apply the 'two largest loads' floor."),
-    ("Lighting", "Constant", 1.0, None, None, None, None, "NEC 220.42 'all others': 100%"),
-    ("Lighting - Dwelling Unit", "Tiered", 1.0, 3000, 0.35, 120000, 0.25, NEC42),
-    ("Lighting - Hospital", "Tiered", 0.40, 50000, 0.20, None, None, NEC42),
-    ("Lighting - Hotel/Motel", "Tiered", 0.60, 20000, 0.50, 100000, 0.35, NEC42),
-    ("Lighting - Warehouse", "Tiered", 1.0, 12500, 0.50, None, None, NEC42),
-    ("Motor", "Largest Motor +25%", 1.0, None, None, None, None, "NEC 430.24: 100% of all + 25% of the largest motor circuit"),
-    ("Other", "Constant", 1.0, None, None, None, None, "100%. Also catches loads entered with no class."),
-    ("Power", "Constant", 1.0, None, None, None, None, "100%"),
-    ("Receptacle", "Tiered", 1.0, 10000, 0.50, None, None, "NEC 220.44 (non-dwelling): first 10 kVA @100%, rest @50%"),
-    ("Water Heater", "Constant", 1.0, None, None, None, None, "100%"),
+CLASSES = [  # name, method, f1, l1, f2, l2, f3, basis, continuous (3 h or more; engineer to confirm)
+    ("Cooling", "Constant", 1.0, None, None, None, None, "100%", "Yes"),
+    ("EV Charging", "Constant", 1.0, None, None, None, None, "100% (continuous; size OCPD at 125% separately)", "Yes"),
+    ("Heating", "Constant", 1.0, None, None, None, None, "100%", "Yes"),
+    ("HVAC", "Constant", 1.0, None, None, None, None, "100%", "Yes"),
+    ("Kitchen Equipment", "Quantity", 1.0, None, None, None, None, "NEC 220.56: factor by number of units (table at right). Does not apply the 'two largest loads' floor.", "No"),
+    ("Lighting", "Constant", 1.0, None, None, None, None, "NEC 220.42 'all others': 100%", "Yes"),
+    ("Lighting - Dwelling Unit", "Tiered", 1.0, 3000, 0.35, 120000, 0.25, NEC42, "No"),
+    ("Lighting - Hospital", "Tiered", 0.40, 50000, 0.20, None, None, NEC42, "Yes"),
+    ("Lighting - Hotel/Motel", "Tiered", 0.60, 20000, 0.50, 100000, 0.35, NEC42, "Yes"),
+    ("Lighting - Warehouse", "Tiered", 1.0, 12500, 0.50, None, None, NEC42, "Yes"),
+    ("Motor", "Largest Motor +25%", 1.0, None, None, None, None, "NEC 430.24: 100% of all + 25% of the largest motor circuit", "Yes"),
+    ("Other", "Constant", 1.0, None, None, None, None, "100%. Also catches loads entered with no class.", "No"),
+    ("Power", "Constant", 1.0, None, None, None, None, "100%", "No"),
+    ("Receptacle", "Tiered", 1.0, 10000, 0.50, None, None, "NEC 220.44 (non-dwelling): first 10 kVA @100%, rest @50%", "No"),
+    ("Water Heater", "Constant", 1.0, None, None, None, None, "100%", "Yes"),
 ]
 QTY = [("1", 1.0), ("2", 1.0), ("3", 0.90), ("4", 0.80), ("5", 0.70), ("6 and over", 0.65)]
 BREAKERS = [15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 110, 125, 150, 175, 200,
@@ -60,13 +60,16 @@ SETTINGS = [  # label, value, fmt, name
     ("Flag circuit load above this % of its breaker trip", 0.80, "0%", "LK_BrkLimit"),
     ("Flag phase imbalance above (max deviation from average)", 0.20, "0%", "LK_ImbLimit"),
     ("Flag panel demand above this % of MCB / bus rating", 0.80, "0%", "LK_MCBWarn"),
-    ("Label for empty slots (e.g. SPACE; blank = leave empty)", "SPACE", None, "LK_EmptyLabel"),
+    ("Label for empty slots (e.g. SPARE or SPACE; blank = leave empty)", "SPARE", None, "LK_EmptyLabel"),
     ("Default conductor material (Cu / Al)", "Cu", None, "LK_DefMat"),
     ("Default termination rating, °C (NEC 110.14(C))", 75, "0", "LK_DefTerm"),
     ("Default ambient temperature, °C (NEC 310.15(B))", 30, "0", "LK_DefAmb"),
     ("Default current-carrying conductors per raceway (NEC 310.15(C))", 3, "0", "LK_DefCCC"),
     ("Smallest conductor the tool will pick (branch practice)", "12", "@", "LK_MinWire"),
     ("Largest conductor per parallel set (above this, go parallel)", "500", "@", "LK_MaxWire"),
+    ("Default insulation rating, °C: design basis (75 = any NEC building wire; 90 = THHN/THWN-2, XHHW-2 only)", 75, "0", "LK_DefIns"),
+    ("Flag combined derating factor below (company practice)", 0.80, "0%", "LK_DerateMin"),
+    ("Apply NEC 240.4(B) next size up (Yes / No)", "No", None, "LK_Use2404B"),
 ]
 
 # NEC 2023 Table 310.16 (same values as 2017/2020). Cu 60/75/90 C, Al 60/75/90 C.
@@ -102,13 +105,15 @@ EGC = [(15, "14", "12"), (20, "12", "10"), (60, "10", "8"), (100, "8", "6"), (20
        (300, "4", "2"), (400, "3", "1"), (500, "2", "1/0"), (600, "1", "2/0"), (800, "1/0", "3/0"),
        (1000, "2/0", "4/0"), (1200, "3/0", "250"), (1600, "4/0", "350"), (2000, "250", "400"),
        (2500, "350", "600"), (3000, "400", "600"), (4000, "500", "750")]
-# NEC Table 310.15(B)(1): ambient correction, 90 C column, 30 C base. (upper bound C, factor)
-AMB = [(10, 1.15), (15, 1.12), (20, 1.08), (25, 1.04), (30, 1.00), (35, 0.96), (40, 0.91),
-       (45, 0.87), (50, 0.82), (55, 0.76), (60, 0.71), (65, 0.65), (70, 0.58), (75, 0.50),
-       (80, 0.41), (85, 0.29)]
+# NEC Table 310.15(B)(1)(1): ambient correction, 30 C base, by insulation rating
+AMB = [  # upper bound C, factor 60 C, 75 C, 90 C (0 = conductor not permitted at that ambient)
+    (10, 1.29, 1.20, 1.15), (15, 1.22, 1.15, 1.12), (20, 1.15, 1.11, 1.08), (25, 1.08, 1.05, 1.04),
+    (30, 1.00, 1.00, 1.00), (35, 0.91, 0.94, 0.96), (40, 0.82, 0.88, 0.91), (45, 0.71, 0.82, 0.87),
+    (50, 0.58, 0.75, 0.82), (55, 0.41, 0.67, 0.76), (60, 0, 0.58, 0.71), (65, 0, 0.47, 0.65),
+    (70, 0, 0.33, 0.58), (75, 0, 0, 0.50), (80, 0, 0, 0.41), (85, 0, 0, 0.29)]
 # NEC Table 310.15(C)(1): more than 3 current-carrying conductors. (upper bound count, factor)
 CCC = [(3, 1.00), (6, 0.80), (9, 0.70), (20, 0.50), (30, 0.45), (40, 0.40), (9999, 0.35)]
-BRKTYPES = ["Standard", "GFCI", "AFCI", "AFCI/GFCI (DF)", "GFEP (30 mA)", "Shunt Trip", "HACR",
+BRKTYPES = ["Standard", "100% rated", "Straight 240V", "GFCI", "AFCI", "AFCI/GFCI (DF)", "GFEP (30 mA)", "Shunt Trip", "HACR",
             "Lock-on", "SWD", "Fused"]
 
 
@@ -177,7 +182,7 @@ def build_lookups(wb):
     dvh = DataValidation(type="list", formula1='"A,B,C"', allow_blank=True)
     ws.add_data_validation(dvh); dvh.add("G4:G19")
 
-    # --- Settings A22..B33
+    # --- Settings A22..B36
     ws["A22"] = "SETTINGS"
     ws["A22"].font = font(10, True, C_LABEL)
     for i, (lab, val, fmt, nm) in enumerate(SETTINGS):
@@ -190,7 +195,8 @@ def build_lookups(wb):
         add_name(wb, nm, f"Lookups!$B${r}")
     dv = DataValidation(type="list", formula1="DD_Class", allow_blank=False)
     ws.add_data_validation(dv); dv.add("B23")
-    for addr, f1 in [("B28", '"Cu,Al"'), ("B29", '"60,75,90"'), ("B32", "LK_WSize"), ("B33", "LK_WSize")]:
+    for addr, f1 in [("B28", '"Cu,Al"'), ("B29", '"60,75,90"'), ("B32", "LK_WSize"), ("B33", "LK_WSize"),
+                     ("B34", '"75,90"'), ("B36", '"Yes,No"')]:
         d = DataValidation(type="list", formula1=f1, allow_blank=False)
         ws.add_data_validation(d); d.add(addr)
 
@@ -200,15 +206,21 @@ def build_lookups(wb):
                        "Tier 1 applies up to (VA)", "Tier 2 %", "Tier 2 applies up to (VA)",
                        "Tier 3 % (remainder)", "Basis / notes"]):
         hdr(ws, f"{col}3", t)
+    for col, t in [("P", "Continuous\nload?")]:
+        hdr(ws, f"{col}3", t)
     for i in range(NCLS):
         r = 4 + i
-        row = CLASSES[i] if i < len(CLASSES) else (None,) * 8
+        row = CLASSES[i] if i < len(CLASSES) else (None,) * 9
         inp(f"H{r}", row[0]); inp(f"I{r}", row[1])
         inp(f"J{r}", row[2], "0%", AL_C); inp(f"K{r}", row[3], "#,##0", AL_C)
         inp(f"L{r}", row[4], "0%", AL_C); inp(f"M{r}", row[5], "#,##0", AL_C)
         inp(f"N{r}", row[6], "0%", AL_C); inp(f"O{r}", row[7])
         ws[f"O{r}"].font = font(8, False, "595959")
         ws[f"O{r}"].alignment = Alignment(wrap_text=True, vertical="center")
+        inp(f"P{r}", row[8], None, AL_C)
+    dvc = DataValidation(type="list", formula1='"Yes,No"', allow_blank=True)
+    ws.add_data_validation(dvc); dvc.add("P4:P23")
+    add_name(wb, "LK_Cont", "Lookups!$P$4:$P$23")
     for nm, col in [("LK_ClassName", "H"), ("LK_Method", "I"), ("LK_F1", "J"), ("LK_L1", "K"),
                     ("LK_F2", "L"), ("LK_L2", "M"), ("LK_F3", "N")]:
         add_name(wb, nm, f"Lookups!${col}$4:${col}$23")
@@ -299,37 +311,41 @@ def build_lookups(wb):
     ws["AR1"] = "NEC 250.122"
     ws["AR1"].font = font(9, True, C_LABEL)
 
-    # --- Ambient AV..AW (310.15(B)(1), 90 C), CCC AY..AZ (310.15(C)(1))
-    for col, t in zip(["AV", "AW"], ["Ambient up\nto (°C)", "Factor\n(90 °C)"]):
+    # --- Ambient AV..AY (310.15(B)(1)(1): 60/75/90 C columns), CCC BA..BB (310.15(C)(1)), breaker types BD
+    for col, t in zip(["AV", "AW", "AX", "AY"], ["Ambient up\nto (°C)", "60 °C\ninsulation", "75 °C\ninsulation",
+                                                 "90 °C\ninsulation"]):
         hdr(ws, f"{col}3", t)
-    for i, (t, f) in enumerate(AMB):
-        inp(f"AV{4+i}", t, "0", AL_C); inp(f"AW{4+i}", f, "0.00", AL_C)
+    for i, (t, f60, f75, f90) in enumerate(AMB):
+        inp(f"AV{4+i}", t, "0", AL_C)
+        for col, f in zip(["AW", "AX", "AY"], [f60, f75, f90]):
+            inp(f"{col}{4+i}", f, "0.00", AL_C)
     add_name(wb, "LK_AmbT", f"Lookups!$AV$4:$AV${3+len(AMB)}")
-    add_name(wb, "LK_AmbF", f"Lookups!$AW$4:$AW${3+len(AMB)}")
-    ws["AV1"] = "NEC 310.15(B)(1)"
+    add_name(wb, "LK_AmbF", f"Lookups!$AW$4:$AY${3+len(AMB)}")
+    ws["AV1"] = "NEC 310.15(B)(1)(1)"
     ws["AV1"].font = font(9, True, C_LABEL)
-    for col, t in zip(["AY", "AZ"], ["Current-carrying\nconductors up to", "Factor"]):
+    ws["AV2"] = "0.00 = not permitted"
+    ws["AV2"].font = font(8, False, "595959", italic=True)
+    for col, t in zip(["BA", "BB"], ["Current-carrying\nconductors up to", "Factor"]):
         hdr(ws, f"{col}3", t)
     for i, (k, f) in enumerate(CCC):
-        inp(f"AY{4+i}", k, "0", AL_C); inp(f"AZ{4+i}", f, "0.00", AL_C)
-    add_name(wb, "LK_CccN", f"Lookups!$AY$4:$AY${3+len(CCC)}")
-    add_name(wb, "LK_CccF", f"Lookups!$AZ$4:$AZ${3+len(CCC)}")
-    ws["AY1"] = "NEC 310.15(C)(1)"
-    ws["AY1"].font = font(9, True, C_LABEL)
+        inp(f"BA{4+i}", k, "0", AL_C); inp(f"BB{4+i}", f, "0.00", AL_C)
+    add_name(wb, "LK_CccN", f"Lookups!$BA$4:$BA${3+len(CCC)}")
+    add_name(wb, "LK_CccF", f"Lookups!$BB$4:$BB${3+len(CCC)}")
+    ws["BA1"] = "NEC 310.15(C)(1)"
+    ws["BA1"].font = font(9, True, C_LABEL)
 
-    # --- Breaker types BB
-    hdr(ws, "BB3", "Breaker type")
+    hdr(ws, "BD3", "Breaker type")
     for i, b in enumerate(BRKTYPES):
-        inp(f"BB{4+i}", b, None, AL_C)
-    add_name(wb, "LK_BrkType", f"Lookups!$BB$4:$BB$19")   # blank rows free for additions
+        inp(f"BD{4+i}", b, None, AL_C)
+    add_name(wb, "LK_BrkType", f"Lookups!$BD$4:$BD$19")   # blank rows free for additions
 
     widths = {"A": 30, "B": 8, "C": 7, "D": 7, "E": 7, "F": 34, "G": 9, "H": 24, "I": 19,
-              "J": 9, "K": 11, "L": 8, "M": 11, "N": 10, "O": 46, "P": 2, "Q": 11, "R": 10,
+              "J": 9, "K": 11, "L": 8, "M": 11, "N": 10, "O": 46, "P": 11, "Q": 11, "R": 10,
               "S": 2, "T": 11, "U": 2, "V": 11, "W": 2, "X": 11, "Y": 11, "Z": 12, "AA": 12,
               "AB": 11, "AC": 18, "AD": 20, "AE": 2, "AF": 7, "AG": 11, "AH": 11,
               "AI": 7, "AJ": 7, "AK": 7, "AL": 7, "AM": 7, "AN": 7, "AO": 10, "AP": 10, "AQ": 2,
-              "AR": 10, "AS": 8, "AT": 8, "AU": 2, "AV": 9, "AW": 8, "AX": 2, "AY": 13, "AZ": 8,
-              "BA": 2, "BB": 16}
+              "AR": 10, "AS": 8, "AT": 8, "AU": 2, "AV": 9, "AW": 10, "AX": 10, "AY": 10, "AZ": 2,
+              "BA": 13, "BB": 8, "BC": 2, "BD": 16}
     for k, v in widths.items():
         ws.column_dimensions[k].width = v
     for r in range(4, 28):

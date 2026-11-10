@@ -21,7 +21,8 @@ import build  # noqa: E402
 import recalc  # noqa: E402
 
 
-def make(out, test=False):
+def make(out, test=False, blank=False, post=None):
+    """post: optional function(raw_path) run on the openpyxl file before recalculation (used by tests)."""
     out = pathlib.Path(out).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
     raw = out.with_name(out.stem + "_raw.xlsx")
@@ -30,7 +31,9 @@ def make(out, test=False):
     if test:
         from test_panels import TEST_PANELS
         extra = TEST_PANELS
-    build.main(str(raw), extra=extra)
+    build.main(str(raw), extra=extra, examples=not blank)
+    if post:
+        post(raw)
     recalc.recalc(raw, calc)
     errs, n = recalc.find_errors(calc)
     subprocess.run([sys.executable, str(ROOT / "shared" / "inject.py"), str(raw), str(calc), str(out)], check=True)
@@ -45,7 +48,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(ROOT / "dist" / "Panel_Schedule_Tool.xlsx"))
     ap.add_argument("--test", action="store_true", help="include regression panels")
+    ap.add_argument("--blank", action="store_true", help="blank starter workbook (templates only)")
     a = ap.parse_args()
-    _, calc, n = make(a.out, a.test)
+    _, calc, n = make(a.out, a.test, a.blank)
     calc.unlink()
     sys.exit(1 if n else 0)

@@ -2,6 +2,19 @@
 
 Deliverable: `Panel_Schedule_Tool.xlsx`, v2 built 2026-11-02 (v1 2026-10-28). It replaces the macro-based panel workbook (NEW SHEET / IMPORT SUB PANEL / COPY buttons). Everything runs on lookup tables, INDEX/MATCH and INDIRECT; Excel 2007 functions only.
 
+## v2.1 (2026-11-10)
+See CHANGELOG. Layout: odd inputs A:U (C:Q editable), schedule W:AP, even inputs AR:BL, hidden calc zone from
+BP; parameters/exports in BQ1:BQ81. New helper columns per circuit: cf, Ia, tc, xa, xb, xc, gov (cable tests),
+is100 (breaker rating), own0/ov/orank (overrides), dsrc (which row shows a breaker's text on the schedule).
+Merged look = no static lines between circuit rows in the text columns + a conditional-format top line where
+a breaker starts. Sheet-scoped names: Schedule (print area), Circuit_Inputs (reset).
+
+Cable tests (each per set, sizes from LK_Amp):
+(a) cap column (lower of termination, insulation) ≥ L × (1.25·cf + (1−cf)), 1.0 instead of 1.25 if 100% rated;
+(b) insulation column × ambient(insulation) × bundling ≥ L; (c) derated and cap ≥ trip (or > next lower
+standard rating when 240.4(B) is on, ≤ 800 A, not receptacle circuits) and 240.4(D); size = max of the three,
+minimum size and 1/0 for parallel sets. L = circuit amps (sub-panel feeders: demand-scaled line amps).
+
 ## v2 changes (2026-11-02)
 - **Company look:** the print area now follows the v005 sheets: header block, CKT# | DESCRIPTION | TRIP | POLES | BRK TYPE | WIRE SIZE | L-1/L-2/L-3 VA (odd/even pairs) | mirror, TOTAL LOAD VA ×2 / TOTAL AMPS, load classification + totals block with MCA. The Revit print view was dropped.
 - **Bigger boards:** sheet capacity is set at build time: `Template` (42) and `Template 84` (84). No. of Circuits 12–84.
@@ -31,7 +44,7 @@ Deliverable: `Panel_Schedule_Tool.xlsx`, v2 built 2026-11-02 (v1 2026-10-28). It
 - Totals are arithmetic VA sums (LP000 12,620 VA vs Revit 12,470 VA vector sum).
 
 ## Verification (2026-11-02)
-- 41,740 formulas, 0 errors after LibreOffice recalc.
+- v2.1: 0 formula errors after LibreOffice recalc; 30 regression tests (tests/).
 - High-leg regression (`tests/test_panels.py`, HLTEST): A 35.27 / B 31.10 / C 21.10 A, max 35.27. 1P on B = ERR; 2P on A–B = 240.85 WARN.
 - LP000: Lighting - Dwelling Unit 4,860 VA → 75.12%; total 12,620 VA.
 - Edge cases (`tests/test_panels.py` E1–E5): high leg on C, 115/230 (199 V), XFMR missing, neutral sub on high leg, Al / 40 °C / 6 CCC feeder (350 kcmil at 200 A), overrides.

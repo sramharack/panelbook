@@ -63,7 +63,7 @@ PANELS = {
     # --- anonymised retail store on a 120/240 V high-leg delta service (84-circuit board, 54 used)
     "RMDP": (dict(name="RMDP", title="Distribution Panel", loc="Retail Store - Electrical Room",
                   manual="Utility bank (closed delta)", mount="Surface", encl="Type 1", slots=54, dist=HLD,
-                  aic="42 kA", mtype="MCB", mains=600, mcb=500, amb=35,
+                  aic="42 kA", mtype="MCB", mains=600, mcb=500, amb=35, brk100="MCB 100%",
                   notes1="High-leg delta: 120 V loads on A and C only. 240 V 3-pole chillers and RTUs; "
                          "120/208 V sales-floor panel LP-R1 through a 30 kVA transformer."),
              {1: dict(desc="Chiller CH-1", cls="Cooling", add=30000, pol=3, trip=100),
@@ -118,7 +118,7 @@ def build_readme(wb):
     ws.column_dimensions["A"].width = 3
     ws.column_dimensions["B"].width = 120
     lines = [
-        ("t", "Panel Schedule Tool"),
+        ("t", f"Panel Schedule Tool (panelbook {VERSION})"),
         ("s", "No macros. Every number is a formula driven by lookup tables and cell references, so it works in desktop Excel, Excel online and on a Mac. The printed schedule follows the company v005 layout."),
         ("h", "Sheets"),
         ("p", "Panels: register and summary of every panel (type each panel's tab name in column B)."),
@@ -136,6 +136,13 @@ def build_readme(wb):
         ("p", "Each sheet has a fixed capacity: 42 circuits (Template) or 84 circuits (Template 84). Copy the one that fits, set No. of Circuits (12 to 84), and hide the unused circuit rows to shorten the printout. 84-circuit sheets print portrait."),
         ("h", "Multi-pole breakers"),
         ("p", "Enter the breaker on its first circuit only (Poles = 2 or 3). The next slot(s) on the same side are taken automatically and show '(pole of CKT x)'. Entering anything in a taken slot is flagged ERR."),
+        ("p", "On the schedule a 2- or 3-pole breaker reads as one merged block: no lines between its rows, description on the first row (2P) or the middle row (3P)."),
+        ("h", "Overrides, resets and views"),
+        ("p", "VA override: type the VA to use in a circuit's 'VA override' column, with a reason. Totals, amps, demand, breaker and cable checks all follow. The row shows WARN, the panel's Circuit flags count it, and it is listed under 'Overrides in effect' below the circuits. Clear the cell to return to the calculated value."),
+        ("p", "Never type on the schedule itself: a typed-over cell no longer calculates. The tool counts typed-over schedule cells and flags them ERR in Circuit flags and on the Panels sheet."),
+        ("p", "Reset a circuit: select its yellow cells (Description to Override reason) and press Delete. Reset a whole panel: choose 'Circuit_Inputs' in the Name Box (left of the formula bar), press Delete. Header inputs are kept."),
+        ("p", "Working / print view: the 1 and 2 buttons above the column letters hide or show the input zones."),
+        ("p", "AutoCAD: each panel sheet has a named range 'Schedule' (the print area). Use it with TABLE > From a data link, and choose 'Start with Excel formatting, do not update' to keep formatting changes made in CAD."),
         ("h", "Line currents (TOTAL AMPS)"),
         ("p", "Each circuit adds its line current to the phases it lands on: 1-pole = VA / V(L-N); 2-pole = VA / V(L-L) on each of its two lines; 3-pole = VA / (√3 × V(L-L)) on each line. This is exact for 1- and 2-pole loads and balanced 3-pole loads on every system, including high-leg delta. (Phase VA ÷ V(L-N) overstates 3-pole loads by 15% and understates 2-pole loads on 120/208 V by 13%.)"),
         ("p", "Panel current = the highest line current. Est. demand amps = that × (total demand VA / total connected VA). Loading, Panels and Topology all use it. MCA = next standard breaker at or above the est. demand amps, as on the v005 sheets."),
@@ -183,10 +190,11 @@ def build_readme(wb):
         r += 1
 
 
-def main(out=None, extra=None):
-    """extra: optional dict of additional panels (same shape as PANELS) for testing."""
+def main(out=None, extra=None, examples=True):
+    """extra: optional dict of additional panels (same shape as PANELS) for testing.
+    examples=False builds the blank starter workbook (templates only)."""
     out = out or OUT
-    panels = dict(PANELS)
+    panels = dict(PANELS) if examples else {k: v for k, v in PANELS.items() if k in TEMPLATES}
     if extra:
         panels.update(extra)
     wb = openpyxl.Workbook()

@@ -7,6 +7,7 @@ from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter as CL, column_index_from_string as CI
 
 FONT = "Arial"
+VERSION = "2.1.0"
 
 
 # ---------- styles ----------
@@ -76,11 +77,12 @@ class Layout:
 
 # input zones (odd = left of schedule, even = right)
 ZONE_KEYS = ["ckt", "ph", "desc", "cls", "q1", "v1", "q2", "v2", "add", "sub", "xf",
-             "pol", "trip", "brk", "wov", "va", "amp", "wire", "stat"]
+             "pol", "trip", "brk", "wov", "ovr", "why", "va", "amp", "wire", "stat"]
+INPUT_KEYS = ["desc", "cls", "q1", "v1", "q2", "v2", "add", "sub", "xf", "pol", "trip", "brk", "wov", "ovr", "why"]
 ODD = {k: CL(1 + i) for i, k in enumerate(ZONE_KEYS)}                     # A..S
 ZONE_WIDTHS = {"ckt": 5, "ph": 5.5, "desc": 30, "cls": 22, "q1": 6, "v1": 7,
                "q2": 6, "v2": 7, "add": 8, "sub": 11, "xf": 7, "pol": 5.5, "trip": 6,
-               "brk": 10, "wov": 8, "va": 9, "amp": 7, "wire": 22, "stat": 40}
+               "brk": 10, "wov": 8, "ovr": 9, "why": 18, "va": 9, "amp": 7, "wire": 24, "stat": 40}
 
 # schedule (print area), company v005 look: I..AB there, U..AN here
 SCH_KEYS = ["ckto", "desco", "tripo", "polo", "brko", "wireo", "g1",
@@ -98,18 +100,19 @@ GAPS = [CL(CI(ODD["stat"]) + 1), CL(CI(SCH_LAST) + 1), CL(CI(EVEN["stat"]) + 1)]
 PHASE_COLS = {"A": ("L1o", "L1e"), "B": ("L2o", "L2e"), "C": ("L3o", "L3e")}
 
 # calc zone (hidden). Fixed start leaves spare columns for future input columns.
-CALC0 = CI("BK")
+CALC0 = CI("BP")
 assert CALC0 > CI(EVEN["stat"]) + 1
 PL, PV, ROWPH = CL(CALC0), CL(CALC0 + 1), CL(CALC0 + 2)
 HKEYS = ["sub", "valid", "sVA", "sA", "sB", "sC", "sPol", "sDem", "sIA", "sIB", "sIC",
          "sVLL", "sVLN", "sN", "sHL", "xfm", "own", "VA", "P", "sh1", "sh2", "sh3",
          "c1", "c2", "c3", "has", "cont", "slot", "sla", "amp", "key", "frank",
-         "t", "oi", "oa", "ns", "wi", "ei", "nN", "wlab", "cab"]
+         "t", "oi", "oa", "ns", "wi", "ei", "nN", "wlab", "cab",
+         "cf", "Ia", "tc", "xa", "xb", "xc", "gov", "is100", "own0", "ov", "orank", "dsrc"]
 OH = {k: CL(CALC0 + 3 + i) for i, k in enumerate(HKEYS)}
 EH = {k: CL(CALC0 + 3 + len(HKEYS) + i) for i, k in enumerate(HKEYS)}
 _c = CALC0 + 3 + 2 * len(HKEYS)
 CKEYS = ["cname", "loc", "lcnt", "lmax", "subc", "subn", "subm", "conn", "cnt", "mx",
-         "meth", "f1", "l1", "f2", "l2", "f3", "dem", "df", "ord"]
+         "meth", "f1", "l1", "f2", "l2", "f3", "dem", "df", "ord", "cflag"]
 CB = {k: CL(_c + i) for i, k in enumerate(CKEYS)}
 _c += len(CKEYS)
 FKEYS = ["fname", "fcktn", "fpol", "ftrip", "fxf", "fckt", "fbrk", "fva", "fdem"]
@@ -130,10 +133,16 @@ P = {"name": 1, "conn": 2, "dem": 3, "demA": 4, "phA": 5, "phB": 6, "phC": 7, "h
      "supply": 36, "avg": 37, "rating": 38, "loading": 39, "ncls": 40, "chk": 41,
      # v2
      "hl": 42, "vhl": 43, "amax": 44, "mat": 45, "fct": 46, "term": 47, "fcab": 48,
-     "mca": 49, "neut": 50, "cap": 51, "amb": 52, "ccc": 53, "tcol": 54, "c90": 55,
+     "mca": 49, "neut": 50, "cap": 51, "amb": 52, "ccc": 53, "ccol": 54, "icol": 55,
      "lcol": 56, "minw": 57, "maxw": 58, "maxamp": 59, "i10": 60, "hlin": 61,
      "sysbox": 62, "hlnote": 63, "hl1p": 64, "ambf": 65, "cccf": 66, "fns": 67,
-     "fwi": 68, "fei": 69, "aic": 70}
+     "fwi": 68, "fei": 69, "aic": 70,
+     # v2.1 cable sizing
+     "ins": 71, "contf": 72, "basis": 73, "b2404": 74, "maxterm": 75,
+     # v2.1 breaker rating
+     "brkmode": 76, "brknote": 77, "n100": 78, "mcbreq": 79,
+     # v2.1 overrides
+     "nov": 80, "ntyped": 81}
 P_LABELS = {
     "name": "Panel name", "conn": "Total connected VA (incl. sub-panels)",
     "dem": "Total est. demand VA", "demA": "Est. demand A (max line A x demand/connected)",
@@ -156,13 +165,20 @@ P_LABELS = {
     "term": "Termination rating C", "fcab": "Feeder cable text",
     "mca": "MCA (next std OCPD >= demand A)",
     "neut": "Has neutral (1/0)", "cap": "Sheet capacity (circuits)", "amb": "Ambient C",
-    "ccc": "Current-carrying conductors per raceway", "tcol": "LK_Amp column, termination",
-    "c90": "LK_Amp column, 90C", "lcol": "LK_Lim column", "minw": "Min wire index",
+    "ccc": "Current-carrying conductors per raceway",
+    "ccol": "LK_Amp column for the cap: lower of termination and insulation",
+    "icol": "LK_Amp column for derating: insulation rating", "lcol": "LK_Lim column", "minw": "Min wire index",
     "maxw": "Max wire index per set", "maxamp": "Allowable A of max size per set",
     "i10": "Index of 1/0", "hlin": "High-leg phase input", "sysbox": "System box text",
     "hlnote": "High-leg schedule note", "hl1p": "1P loads on high leg",
     "ambf": "Ambient factor", "cccf": "CCC factor", "fns": "Feeder sets",
-    "fwi": "Feeder wire index", "fei": "Feeder EGC index", "aic": "AIC text"}
+    "fwi": "Feeder wire index", "fei": "Feeder EGC index", "aic": "AIC text",
+    "ins": "Insulation rating C (design basis)", "contf": "Continuous share of connected VA",
+    "basis": "Conductor footnote text", "b2404": "Apply 240.4(B) (1/0)",
+    "maxterm": "Cap-column ampacity of max size per set",
+    "brkmode": "Breaker rating: 0 standard 80%, 1 MCB 100%, 2 all 100%", "brknote": "Breaker footnote text",
+    "n100": "Circuits with 100%-rated breakers", "mcbreq": "Min MCB A (125% continuous + noncontinuous demand)",
+    "nov": "VA overrides in effect", "ntyped": "Schedule cells typed over (formula replaced)"}
 
 
 def pv(key):
@@ -173,7 +189,8 @@ def pv(key):
 IN = {"name": "D2", "title": "D3", "loc": "D4", "manual": "D5", "mount": "D6",
       "encl": "D7", "slots": "D8", "dist": "I2", "aic": "I3", "mtype": "I4",
       "mains": "I5", "mcb": "I6", "notes1": "I7", "notes2": "I8",
-      "hlin": "O2", "mat": "O3", "term": "O4", "amb": "O5", "ccc": "O6"}
+      "hlin": "O2", "mat": "O3", "term": "O4", "amb": "O5", "ccc": "O6",
+      "brk100": "R7"}   # O3 = conductor: "Cu 75C" etc.
 
 # ---------- Panels (register) sheet layout ----------
 REG_R0, REG_R1 = 5, 54

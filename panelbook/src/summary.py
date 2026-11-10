@@ -109,6 +109,8 @@ def build_panels(wb, names):
               f'&IF({RH["cnt"]}{r}>1," · Fed from 2+ panels","")'
               f'&IF({PAR[7]}{r}<>""," · Feed loop","")'
               f'&IF(LEFT({RH["sysx"]}{r},1)="⚠"," · Voltage change, no XFMR","")'
+              f'&IF(N({g("ntyped")})>0," · "&N({g("ntyped")})&" typed over","")'
+              f'&IF(N({g("nov")})>0," · "&N({g("nov")})&" override(s)","")'
               f'&IF(N({V["err"]})>0," · "&{V["err"]}&" ERR","")'
               f'&IF(N({V["warn"]})>0," · "&{V["warn"]}&" WARN","")'
               f'&IF(AND(ISNUMBER({V["bus"]}),ISNUMBER({V["mcb"]})),IF(N({V["mcb"]})>N({V["bus"]})," · MCB > bus",""),"")'

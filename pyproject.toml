@@ -1,0 +1,13 @@
+[project]
+name = "panelbook"
+version = "2.1.0"
+description = "Macro-free Excel panel schedules generated from Python"
+requires-python = ">=3.10"
+dependencies = ["openpyxl>=3.1", "lxml>=4.9"]
+
+[dependency-groups]
+dev = ["pytest>=7"]
+
+[tool.pytest.ini_options]
+testpaths = ["panelbook/tests"]
+filterwarnings = ["ignore::UserWarning:openpyxl.*"]
